@@ -107,9 +107,14 @@ function ItemRow({ item, onChange }: { item: ReservationItem, onChange: (p: Part
   const [suggest, setSuggest] = useState<{name:string,type:string}[]>([])
   const [q, setQ] = useState('')
 
+  async function loadDefault() {
+    const res = await api.get('/api/menu-items/search', { params: { type: item.type } })
+    setSuggest(res.data)
+  }
+
   useEffect(() => {
     const t = setTimeout(async () => {
-      if (!q) { setSuggest([]); return }
+      if (!q) { await loadDefault(); return }
       const res = await api.get('/api/menu-items/search', { params: { q, type: item.type } })
       setSuggest(res.data)
     }, 200)
@@ -124,7 +129,7 @@ function ItemRow({ item, onChange }: { item: ReservationItem, onChange: (p: Part
         <option>dessert</option>
       </select>
       <div className="col-span-8 relative">
-        <input className="input w-full" placeholder="Nom du plat" value={item.name} onChange={e=>{ onChange({ name: e.target.value }); setQ(e.target.value) }} />
+        <input className="input w-full" placeholder="Nom du plat" value={item.name} onFocus={()=>{ if (!q) loadDefault() }} onChange={e=>{ onChange({ name: e.target.value }); setQ(e.target.value) }} />
         {suggest.length>0 && (
           <div className="absolute z-10 bg-white border rounded-md mt-1 max-h-48 overflow-auto w-full">
             {suggest.map((s, i) => (

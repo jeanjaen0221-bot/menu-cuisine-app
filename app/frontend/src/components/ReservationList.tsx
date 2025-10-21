@@ -27,7 +27,7 @@ export default function ReservationList() {
           <button className="btn" onClick={load}>Filtrer</button>
         </div>
         <div className="flex gap-2">
-          <Link to="/reservation/new" className="btn">➕ Nouvelle fiche</Link>
+          <Link to={date ? `/reservation/new?date=${encodeURIComponent(date)}` : "/reservation/new"} className="btn">➕ Nouvelle fiche</Link>
           <button className="btn" onClick={() => {
             if (!date) { alert('Sélectionnez une date'); return }
             fileDownload(`/api/reservations/day/${date}/pdf`)
