@@ -97,3 +97,9 @@ class ReservationRead(ReservationBase):
     created_at: datetime
     updated_at: datetime
     items: List[ReservationItemRead] = Field(default_factory=list)
+
+
+# Key/Value settings storage (e.g., Zenchef token and restaurant id)
+class Setting(SQLModel, table=True):
+    key: str = Field(primary_key=True)
+    value: str
