@@ -10,7 +10,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": "."
+    "baseUrl": ".",
+    "types": ["vite/client", "node"]
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

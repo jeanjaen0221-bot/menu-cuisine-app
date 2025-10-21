@@ -40,7 +40,7 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
   }
 
   async function submit() {
-    await onSubmit({ client_name, service_date, arrival_time, pax: Number(pax), drink_formula, notes, status: status as any, items })
+    await onSubmit({ client_name, service_date, arrival_time, pax: Number(pax), drink_formula, notes, status, items })
   }
 
   return (
@@ -133,7 +133,7 @@ function ItemRow({ item, onChange }: { item: ReservationItem, onChange: (p: Part
           </div>
         )}
       </div>
-      <input type="number" min={0} className="input col-span-2" value={item.quantity} onChange={e=>onChange({ quantity: Number(e.target.value) })} />
+      <input type="number" min={0} className="input col-span-2" value={item.quantity} onChange={e=>onChange({ quantity: parseInt(e.target.value || '0', 10) })} />
     </div>
   )
 }
