@@ -7,3 +7,4 @@ pydantic-settings==2.6.1
 python-dotenv==1.0.1
 reportlab==4.2.5
 aiofiles==24.1.0
+psycopg2-binary==2.9.9
