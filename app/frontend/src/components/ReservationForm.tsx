@@ -20,6 +20,7 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
   const [notes, setNotes] = useState(initial?.notes || '')
   const [status, setStatus] = useState<Reservation['status']>(initial?.status || 'draft')
   const [items, setItems] = useState<ReservationItem[]>(initial?.items || [])
+  const [openRow, setOpenRow] = useState<number | null>(null)
 
   useEffect(() => {
     if (!items.length) {
@@ -90,7 +91,13 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
         <div className="mt-3 space-y-2">
           {items.map((it, idx) => (
             <div key={idx}>
-              <ItemRow item={it} onChange={(p)=>updateItem(idx,p)} />
+              <ItemRow
+                item={it}
+                open={openRow === idx}
+                onFocus={()=>setOpenRow(idx)}
+                onClose={()=>setOpenRow(prev => prev === idx ? null : prev)}
+                onChange={(p)=>updateItem(idx,p)}
+              />
             </div>
           ))}
         </div>
@@ -103,7 +110,7 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
   )
 }
 
-function ItemRow({ item, onChange }: { item: ReservationItem, onChange: (p: Partial<ReservationItem>)=>void }) {
+function ItemRow({ item, onChange, open, onFocus, onClose }: { item: ReservationItem, onChange: (p: Partial<ReservationItem>)=>void, open: boolean, onFocus: ()=>void, onClose: ()=>void }) {
   const [suggest, setSuggest] = useState<{name:string,type:string}[]>([])
   const [q, setQ] = useState('')
 
@@ -122,18 +129,18 @@ function ItemRow({ item, onChange }: { item: ReservationItem, onChange: (p: Part
   }, [q, item.type])
 
   return (
-    <div className="grid grid-cols-12 gap-2">
-      <select className="input col-span-2" value={item.type} onChange={e=>onChange({ type: e.target.value })}>
+    <div className="grid grid-cols-12 gap-2" onBlur={(e)=>{ if (!e.currentTarget.contains(e.relatedTarget as Node)) onClose() }}>
+      <select className="input col-span-2" value={item.type} onChange={e=>{ onChange({ type: e.target.value }); setQ(''); }}>
         <option>entrée</option>
         <option>plat</option>
         <option>dessert</option>
       </select>
       <div className="col-span-8 relative">
-        <input className="input w-full" placeholder="Nom du plat" value={item.name} onFocus={()=>{ if (!q) loadDefault() }} onChange={e=>{ onChange({ name: e.target.value }); setQ(e.target.value) }} />
-        {suggest.length>0 && (
+        <input className="input w-full" placeholder="Nom du plat" value={item.name} onFocus={()=>{ onFocus(); if (!q) loadDefault() }} onChange={e=>{ onChange({ name: e.target.value }); setQ(e.target.value) }} />
+        {open && suggest.length>0 && (
           <div className="absolute z-10 bg-white border rounded-md mt-1 max-h-48 overflow-auto w-full">
             {suggest.map((s, i) => (
-              <div key={i} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onClick={()=>{ onChange({ name: s.name, type: s.type }); setSuggest([]) }}>{s.name}</div>
+              <div key={i} className="px-3 py-2 hover:bg-gray-100 cursor-pointer" onMouseDown={(e)=>{ e.preventDefault(); onChange({ name: s.name, type: s.type }); setSuggest([]); onClose(); }}>{s.name}</div>
             ))}
           </div>
         )}
