@@ -21,6 +21,8 @@ class MenuItemBase(SQLModel):
 
 class MenuItem(MenuItemBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
+    type: str
+    active: bool = True
 
 
 class MenuItemCreate(MenuItemBase):
@@ -44,8 +46,11 @@ class ReservationItemBase(SQLModel):
 
 
 class ReservationItem(ReservationItemBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     reservation_id: uuid.UUID | None = Field(default=None, foreign_key="reservation.id")
+    type: str
+    name: str
+    quantity: int = 0
 
 
 class ReservationItemCreate(ReservationItemBase):

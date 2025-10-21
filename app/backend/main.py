@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .database import init_db
-from .routers import reservations, menu_items
+from .routers import reservations, menu_items, zenchef
 
 load_dotenv()
 
@@ -25,6 +25,7 @@ app.add_middleware(
 # Routers
 app.include_router(menu_items.router)
 app.include_router(reservations.router)
+app.include_router(zenchef.router)
 
 # Ensure DB
 init_db()

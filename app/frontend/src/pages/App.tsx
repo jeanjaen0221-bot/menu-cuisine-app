@@ -2,6 +2,7 @@ import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import Home from './Home'
 import EditReservation from './EditReservation'
 import MenuPage from './MenuPage'
+import ZenchefSettings from './ZenchefSettings'
 
 export default function App() {
   const navigate = useNavigate()
@@ -13,6 +14,7 @@ export default function App() {
           <nav className="flex gap-2">
             <Link className="btn" to="/">Fiches</Link>
             <Link className="btn" to="/menu">Base de plats</Link>
+            <Link className="btn" to="/settings">Paramètres</Link>
           </nav>
         </div>
       </header>
@@ -22,6 +24,7 @@ export default function App() {
           <Route path="/reservation/new" element={<EditReservation />} />
           <Route path="/reservation/:id" element={<EditReservation />} />
           <Route path="/menu" element={<MenuPage />} />
+          <Route path="/settings" element={<ZenchefSettings />} />
         </Routes>
       </main>
     </div>
