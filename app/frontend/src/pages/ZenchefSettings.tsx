@@ -54,7 +54,7 @@ export default function ZenchefSettings() {
         </div>
       </div>
 
-      <h3 className="text-lg font-semibold text-primary mt-8 mb-2">Synchroniser les réservations (>10 pers)</h3>
+      <h3 className="text-lg font-semibold text-primary mt-8 mb-2">Synchroniser les réservations (&gt;10 pers)</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div>
           <label className="label">Du</label>
