@@ -62,6 +62,7 @@ def parse_start_time(iso: str) -> tuple[str, str]:
 
 
 @router.post("/sync")
+@router.post("/sync/")
 def sync_reservations(body: Dict[str, Any], session: Session = Depends(get_session)):
     token = get_setting(session, "zenchef_api_token")
     restaurant_id = get_setting(session, "zenchef_restaurant_id")
