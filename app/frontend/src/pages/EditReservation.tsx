@@ -10,11 +10,13 @@ export default function EditReservation() {
   const location = useLocation()
   const [data, setData] = useState<Reservation | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const isNew = id === 'new'
 
   useEffect(() => {
+    // wait until router provides an id
+    if (!id) return
     if (isNew) {
-      // Prefill from query or use sensible defaults
       const params = new URLSearchParams(location.search)
       const d = params.get('date') || new Date().toISOString().slice(0,10)
       setData({
@@ -32,11 +34,13 @@ export default function EditReservation() {
       } as Reservation)
       return
     }
-    // Existing reservation: load then render
+    setLoading(true)
     setData(null)
+    setError(null)
     api.get(`/api/reservations/${id}`)
       .then(r=> setData(r.data))
       .catch((e:any)=> setError(e?.userMessage || e?.response?.data?.detail || e?.message || 'Erreur de chargement'))
+      .finally(()=> setLoading(false))
   }, [id, isNew, location.search])
 
   async function save(payload: any) {
@@ -79,10 +83,12 @@ export default function EditReservation() {
           </>
         )}
       </div>
-      {(!isNew && !data) ? (
+      {(!isNew && (loading || !data)) ? (
         <div className="text-gray-600">Chargement…</div>
       ) : (
-        <ReservationForm initial={data || undefined} onSubmit={save} />
+        <div key={(data && (data as any).id) || (isNew ? 'new' : id)}>
+          <ReservationForm initial={data || undefined} onSubmit={save} />
+        </div>
       )}
     </div>
   )
