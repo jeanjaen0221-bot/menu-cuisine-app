@@ -47,7 +47,22 @@ def list_reservations(
 
 @router.post("", response_model=ReservationRead)
 def create_reservation(payload: ReservationCreate, session: Session = Depends(get_session)):
-    res = Reservation(**payload.model_dump(exclude={"items"}))
+    # Accept strings for date/time and normalize for safety
+    data = payload.model_dump(exclude={"items"})
+    if isinstance(data.get("service_date"), str):
+        try:
+            data["service_date"] = date.fromisoformat(data["service_date"][:10])
+        except Exception:
+            raise HTTPException(422, "Invalid service_date")
+    if isinstance(data.get("arrival_time"), str):
+        try:
+            t = data["arrival_time"]
+            if len(t) == 5:
+                t = f"{t}:00"
+            data["arrival_time"] = dtime.fromisoformat(t)
+        except Exception:
+            raise HTTPException(422, "Invalid arrival_time")
+    res = Reservation(**data)
     session.add(res)
     session.commit()
     session.refresh(res)
