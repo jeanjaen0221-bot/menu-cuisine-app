@@ -84,8 +84,8 @@ class ReservationCreate(ReservationBase):
 class ReservationUpdate(SQLModel):
     client_name: Optional[str] = None
     pax: Optional[int] = None
-    service_date: Optional[date] = None
-    arrival_time: Optional[time] = None
+    service_date: Optional[str] = None
+    arrival_time: Optional[str] = None
     drink_formula: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[ReservationStatus] = None

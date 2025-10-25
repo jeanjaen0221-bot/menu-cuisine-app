@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time as dtime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -77,6 +77,20 @@ def update_reservation(reservation_id: uuid.UUID, payload: ReservationUpdate, se
         raise HTTPException(404, "Reservation not found")
 
     update_data = payload.model_dump(exclude_unset=True, exclude={"items"})
+    # Normalize string date/time to proper types
+    if isinstance(update_data.get("service_date"), str):
+        try:
+            update_data["service_date"] = date.fromisoformat(update_data["service_date"][:10])
+        except Exception:
+            del update_data["service_date"]
+    if isinstance(update_data.get("arrival_time"), str):
+        try:
+            t = update_data["arrival_time"]
+            if len(t) == 5:
+                t = f"{t}:00"
+            update_data["arrival_time"] = dtime.fromisoformat(t)
+        except Exception:
+            del update_data["arrival_time"]
     for k, v in update_data.items():
         setattr(res, k, v)
     # touch updated_at
