@@ -55,9 +55,12 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
 
   async function submit() {
     const d = service_date || new Date().toISOString().slice(0,10)
-    const t = arrival_time && arrival_time.length >= 4 ? arrival_time : '00:00'
+    let t = arrival_time && arrival_time.length >= 4 ? arrival_time : '00:00'
+    if (/^\d{2}:\d{2}$/.test(t)) t = `${t}:00`
     const name = (client_name || '').trim() || 'Client'
-    const validItems = (items || []).filter(it => (it.name || '').trim() && (it.quantity || 0) > 0)
+    const validItems = (items || [])
+      .filter(it => (it.name || '').trim() && (it.quantity || 0) > 0)
+      .map(it => ({ type: it.type, name: it.name, quantity: it.quantity }))
     await onSubmit({ client_name: name, service_date: d, arrival_time: t, pax: Number(pax) || 1, drink_formula, notes, status, items: validItems })
   }
 
