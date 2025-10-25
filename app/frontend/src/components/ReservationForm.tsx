@@ -29,8 +29,8 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
   useEffect(() => {
     if (!initial) return
     setClient(initial.client_name || '')
-    setDate(initial.service_date || '')
-    setTime(initial.arrival_time || '')
+    setDate((initial.service_date || '').slice(0,10))
+    setTime((initial.arrival_time || '').slice(0,5))
     setPax(initial.pax ?? 2)
     setDrink(initial.drink_formula || DRINKS[0])
     setNotes(initial.notes || '')
