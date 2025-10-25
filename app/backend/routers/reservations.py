@@ -50,14 +50,31 @@ def list_reservations(
 def create_reservation(payload: ReservationCreateIn, session: Session = Depends(get_session)):
     # Accept strings for date/time and normalize for safety
     data = payload.model_dump(exclude={"items"})
-    if isinstance(data.get("service_date"), str):
+    raw_service_date = data.get("service_date")
+    raw_arrival_time = data.get("arrival_time")
+    # Debug (lightweight): log incoming raw fields
+    try:
+        print(f"CREATE payload service_date={raw_service_date} arrival_time={raw_arrival_time}")
+    except Exception:
+        pass
+
+    # Default service_date if empty
+    if not raw_service_date or not str(raw_service_date).strip():
+        raw_service_date = date.today().isoformat()
+    # Default arrival_time if empty
+    if not raw_arrival_time or not str(raw_arrival_time).strip():
+        raw_arrival_time = "00:00:00"
+
+    # Parse service_date
+    if isinstance(raw_service_date, str):
         try:
-            data["service_date"] = date.fromisoformat(data["service_date"][:10])
+            data["service_date"] = date.fromisoformat(raw_service_date[:10])
         except Exception:
             raise HTTPException(422, "Invalid service_date")
-    if isinstance(data.get("arrival_time"), str):
+    # Parse arrival_time
+    if isinstance(raw_arrival_time, str):
         try:
-            t = data["arrival_time"]
+            t = raw_arrival_time
             if len(t) == 5:
                 t = f"{t}:00"
             data["arrival_time"] = dtime.fromisoformat(t)
