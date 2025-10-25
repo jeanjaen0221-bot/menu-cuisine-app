@@ -3,11 +3,12 @@ import datetime as dt
 from typing import Optional, Dict, Any, List
 
 import requests
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from ..database import get_session
-from ..models import Setting, Reservation, ReservationItem
+from ..models import Setting, Reservation, ReservationItem, ProcessedRequest
 
 router = APIRouter(prefix="/api/zenchef", tags=["zenchef"])
 
@@ -63,7 +64,17 @@ def parse_start_time(iso: str) -> tuple[str, str]:
 
 @router.post("/sync")
 @router.post("/sync/")
-def sync_reservations(body: Dict[str, Any], session: Session = Depends(get_session)):
+def sync_reservations(body: Dict[str, Any], request: Request, session: Session = Depends(get_session)):
+    # Idempotency: if Idempotency-Key header is present and already processed, exit early
+    idem_key = request.headers.get("Idempotency-Key")
+    if idem_key:
+        try:
+            session.add(ProcessedRequest(key=idem_key))
+            session.commit()
+        except Exception:
+            session.rollback()
+            # Already processed; no-op
+            return {"created": [], "count": 0, "fromDate": body.get("fromDate"), "toDate": body.get("toDate"), "idempotent": True}
     token = get_setting(session, "zenchef_api_token")
     restaurant_id = get_setting(session, "zenchef_restaurant_id")
     if not token or not restaurant_id:
@@ -97,9 +108,15 @@ def sync_reservations(body: Dict[str, Any], session: Session = Depends(get_sessi
         for r in big:
             d_str, t_str = parse_start_time(r.get("startTime", ""))
             pax = int(r.get("numberOfPeople") or 0)
+            if pax < 1:
+                pax = 1
+            if pax > 500:
+                pax = 500
             customer = r.get("customer") or {}
             client_name = (customer.get("firstname") or "").strip() + " " + (customer.get("lastname") or "").strip()
             client_name = client_name.strip() or "Groupe"
+            if len(client_name) > 200:
+                client_name = client_name[:200]
 
             # De-dup criterion: same date, time, name, pax
             exists = session.exec(
@@ -123,9 +140,14 @@ def sync_reservations(body: Dict[str, Any], session: Session = Depends(get_sessi
                 status="confirmed",
             )
             session.add(res)
-            session.commit()
-            session.refresh(res)
-            created.append({"id": str(res.id), "client_name": client_name, "service_date": d_str, "arrival_time": t_str, "pax": pax})
+            try:
+                session.commit()
+                session.refresh(res)
+                created.append({"id": str(res.id), "client_name": client_name, "service_date": d_str, "arrival_time": t_str, "pax": pax})
+            except IntegrityError:
+                session.rollback()
+                # Duplicate (based on unique constraint if present); skip silently
+                continue
 
         # pagination end condition
         if not reservations or len(reservations) < per_page:

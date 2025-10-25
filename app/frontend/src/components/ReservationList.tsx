@@ -18,6 +18,10 @@ export default function ReservationList() {
   }
 
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    const t = setTimeout(() => { load() }, 300)
+    return () => clearTimeout(t)
+  }, [q, date])
 
   return (
     <div className="card">

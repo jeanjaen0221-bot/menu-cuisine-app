@@ -22,6 +22,8 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
   const [status, setStatus] = useState<Reservation['status']>(initial?.status || 'draft')
   const [items, setItems] = useState<ReservationItem[]>(initial?.items || [])
   const [openRow, setOpenRow] = useState<number | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [errs, setErrs] = useState<{client?:string,date?:string,pax?:string,time?:string}>({})
 
   // Sync when initial changes (e.g., when loading an existing reservation)
   useEffect(() => {
@@ -54,15 +56,32 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
     setItems(prev => [...prev, { type: 'plat', name: '', quantity: 1 }])
   }
 
+  function validate(): boolean {
+    const e: {client?:string,date?:string,pax?:string,time?:string} = {}
+    if (!client_name.trim()) e.client = 'Nom requis'
+    if (!service_date) e.date = 'Date requise'
+    if (!pax || pax < 1) e.pax = 'Min 1'
+    if (arrival_time && !/^\d{2}:\d{2}(:\d{2})?$/.test(arrival_time)) e.time = 'Format HH:MM'
+    setErrs(e)
+    return Object.keys(e).length === 0
+  }
+
   async function submit() {
-    const d = service_date || new Date().toISOString().slice(0,10)
-    let t = arrival_time && arrival_time.length >= 4 ? arrival_time : '00:00'
-    if (/^\d{2}:\d{2}$/.test(t)) t = `${t}:00`
-    const name = (client_name || '').trim() || 'Client'
-    const validItems = (items || [])
-      .filter(it => (it.name || '').trim() && (it.quantity || 0) > 0)
-      .map(it => ({ type: it.type, name: it.name, quantity: it.quantity }))
-    await onSubmit({ client_name: name, service_date: d, arrival_time: t, pax: Number(pax) || 1, drink_formula, notes, status, items: validItems })
+    if (submitting) return
+    if (!validate()) return
+    setSubmitting(true)
+    try {
+      const d = service_date || new Date().toISOString().slice(0,10)
+      let t = arrival_time && arrival_time.length >= 4 ? arrival_time : '00:00'
+      if (/^\d{2}:\d{2}$/.test(t)) t = `${t}:00`
+      const name = (client_name || '').trim() || 'Client'
+      const validItems = (items || [])
+        .filter(it => (it.name || '').trim() && (it.quantity || 0) > 0)
+        .map(it => ({ type: it.type, name: it.name, quantity: it.quantity }))
+      await onSubmit({ client_name: name, service_date: d, arrival_time: t, pax: Number(pax) || 1, drink_formula, notes, status, items: validItems })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -70,19 +89,23 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="label flex items-center gap-2"><User className="h-4 w-4"/> Nom du client</label>
-          <input className="input" value={client_name} onChange={e=>setClient(e.target.value)} />
+          <input className={`input ${errs.client ? 'border-red-300' : ''}`} value={client_name} onChange={e=>{ setClient(e.target.value); if (errs.client) setErrs({...errs, client: undefined}) }} />
+          {errs.client && <div className="text-xs text-red-600 mt-1">{errs.client}</div>}
         </div>
         <div>
           <label className="label flex items-center gap-2"><CalendarDays className="h-4 w-4"/> Date du service</label>
-          <input type="date" className="input" value={service_date} onChange={e=>setDate(e.target.value)} />
+          <input type="date" className={`input ${errs.date ? 'border-red-300' : ''}`} value={service_date} onChange={e=>{ setDate(e.target.value); if (errs.date) setErrs({...errs, date: undefined}) }} />
+          {errs.date && <div className="text-xs text-red-600 mt-1">{errs.date}</div>}
         </div>
         <div>
           <label className="label flex items-center gap-2"><Clock className="h-4 w-4"/> Heure d’arrivée</label>
-          <input type="time" className="input" value={arrival_time} onChange={e=>setTime(e.target.value)} />
+          <input type="time" className={`input ${errs.time ? 'border-red-300' : ''}`} value={arrival_time} onChange={e=>{ setTime(e.target.value); if (errs.time) setErrs({...errs, time: undefined}) }} />
+          {errs.time && <div className="text-xs text-red-600 mt-1">{errs.time}</div>}
         </div>
         <div>
           <label className="label flex items-center gap-2"><Users className="h-4 w-4"/> Nombre de couverts</label>
-          <input type="number" min={1} className="input" value={pax} onChange={e=>setPax(Number(e.target.value))} />
+          <input type="number" min={1} className={`input ${errs.pax ? 'border-red-300' : ''}`} value={pax} onChange={e=>{ setPax(Number(e.target.value)); if (errs.pax) setErrs({...errs, pax: undefined}) }} />
+          {errs.pax && <div className="text-xs text-red-600 mt-1">{errs.pax}</div>}
         </div>
         <div>
           <label className="label flex items-center gap-2"><Wine className="h-4 w-4"/> Formule boisson</label>
@@ -125,7 +148,7 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
       </div>
 
       <div className="mt-6 flex gap-2">
-        <button className="btn" onClick={submit}>Sauvegarder</button>
+        <button className="btn disabled:opacity-60" disabled={submitting} onClick={submit}>{submitting ? 'Sauvegarde…' : 'Sauvegarder'}</button>
       </div>
     </div>
   )

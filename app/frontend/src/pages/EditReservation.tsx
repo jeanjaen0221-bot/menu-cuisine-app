@@ -10,7 +10,7 @@ export default function EditReservation() {
   const location = useLocation()
   const [data, setData] = useState<Reservation | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const isNew = !id || id === 'new'
+  const isNew = id === 'new'
 
   useEffect(() => {
     if (isNew) {

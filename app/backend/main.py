@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -39,19 +40,26 @@ if frontend_dist.exists():
     app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="static")
 
 
-# --- Request logging middleware ---
+# --- Correlation & Request logging middleware ---
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start = time.time()
+    req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    request.state.request_id = req_id
     try:
         response = await call_next(request)
         duration_ms = int((time.time() - start) * 1000)
-        # Basic structured log
-        print(f"REQ {request.method} {request.url.path} -> {response.status_code} ({duration_ms}ms)")
+        # Add correlation header
+        try:
+            response.headers["X-Request-ID"] = req_id
+        except Exception:
+            pass
+        # Basic structured log with correlation id
+        print(f"REQ {req_id} {request.method} {request.url.path} -> {response.status_code} ({duration_ms}ms)")
         return response
     except Exception as e:
         duration_ms = int((time.time() - start) * 1000)
-        print(f"REQ {request.method} {request.url.path} -> 500 ({duration_ms}ms) EXC: {e}")
+        print(f"REQ {req_id} {request.method} {request.url.path} -> 500 ({duration_ms}ms) EXC: {e}")
         raise
 
 
