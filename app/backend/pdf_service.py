@@ -3,9 +3,11 @@ from datetime import date
 from typing import List
 
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus.flowables import HRFlowable
 
 from .models import Reservation, ReservationItem
 
@@ -37,44 +39,84 @@ def generate_reservation_pdf(reservation: Reservation, items: List[ReservationIt
 
     doc = SimpleDocTemplate(filename, pagesize=A4, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="Section", fontSize=12, leading=14, spaceBefore=6, spaceAfter=4, textColor=colors.HexColor("#111111")))
+    styles.add(ParagraphStyle(name="Meta", fontSize=10, leading=13))
     story = []
 
     title = f"FICHE CUISINE – {reservation.service_date}"
     story.append(Paragraph(title, styles['Title']))
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 6))
+    story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#e5e7eb')))
+    story.append(Spacer(1, 10))
 
-    meta = (
-        f"Client : {reservation.client_name}<br/>"
-        f"Heure d’arrivée : {reservation.arrival_time}<br/>"
-        f"Couverts : {reservation.pax}"
-    )
-    story.append(Paragraph(meta, styles['Normal']))
-    story.append(Spacer(1, 12))
+    meta_data = [
+        [Paragraph("Client", styles['Meta']), Paragraph(str(reservation.client_name), styles['Meta'])],
+        [Paragraph("Heure d’arrivée", styles['Meta']), Paragraph(str(reservation.arrival_time), styles['Meta'])],
+        [Paragraph("Couverts", styles['Meta']), Paragraph(str(reservation.pax), styles['Meta'])],
+    ]
+    meta_tbl = Table(meta_data, colWidths=[110, None])
+    meta_tbl.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('TEXTCOLOR', (0,0), (0,-1), colors.HexColor('#374151')),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+    ]))
+    story.append(meta_tbl)
+    story.append(Spacer(1, 14))
 
     entrees, plats, desserts = _split_items(items)
 
     def section(title: str, collection: List[ReservationItem]):
-        story.append(Paragraph(f"<b>{title}</b>", styles['Heading3']))
+        story.append(Paragraph(f"<b>{title}</b>", styles['Section']))
+        data = [[Paragraph("Qté", styles['Meta']), Paragraph("Intitulé", styles['Meta'])]]
         if not collection:
-            story.append(Paragraph("-", styles['Normal']))
-        for it in collection:
-            story.append(Paragraph(f"- {it.quantity}x {it.name}", styles['Normal']))
-        story.append(Spacer(1, 8))
+            data.append(["-", "-"])
+        else:
+            for it in collection:
+                data.append([str(it.quantity), it.name])
+        tbl = Table(data, colWidths=[40, None])
+        tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#f3f4f6')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#111827')),
+            ('GRID', (0,0), (-1,-1), 0.25, colors.HexColor('#e5e7eb')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('ALIGN', (0,1), (0,-1), 'CENTER'),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+            ('RIGHTPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ]))
+        story.append(tbl)
+        story.append(Spacer(1, 10))
 
     section("Entrées :", entrees)
     section("Plats :", plats)
     section("Desserts :", desserts)
 
-    story.append(Paragraph(f"<b>Formule boissons :</b> {reservation.drink_formula}", styles['Normal']))
-    story.append(Spacer(1, 8))
+    story.append(Paragraph("<b>Formule boissons :</b>", styles['Section']))
+    fb_tbl = Table([[reservation.drink_formula or "-"]], colWidths=[None])
+    fb_tbl.setStyle(TableStyle([
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+    ]))
+    story.append(fb_tbl)
+    story.append(Spacer(1, 10))
 
     notes = reservation.notes or ""
-    story.append(Paragraph("<b>Notes :</b>", styles['Heading3']))
-    if notes.strip():
-        for line in notes.splitlines():
-            story.append(Paragraph(f"- {line}", styles['Normal']))
-    else:
-        story.append(Paragraph("-", styles['Normal']))
+    story.append(Paragraph("<b>Notes :</b>", styles['Section']))
+    note_lines = [line for line in notes.splitlines() if line.strip()] or ["-"]
+    note_tbl = Table([[Paragraph(l, styles['Normal'])] for l in note_lines], colWidths=[None])
+    note_tbl.setStyle(TableStyle([
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+        ('INNERGRID', (0,0), (-1,-1), 0.25, colors.HexColor('#f3f4f6')),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+    ]))
+    story.append(note_tbl)
 
     doc.build(story)
     return filename
@@ -91,6 +133,9 @@ def generate_day_pdf(d: date, reservations: List[Reservation], items_by_res: dic
         y = height - 40
         c.setFont("Helvetica-Bold", 16)
         c.drawString(40, y, f"FICHE CUISINE – {res.service_date}")
+        c.setStrokeColorRGB(0.9, 0.9, 0.9)
+        c.setLineWidth(1)
+        c.line(40, y-6, width-40, y-6)
         y -= 30
         c.setFont("Helvetica", 11)
         c.drawString(40, y, f"Client : {res.client_name}")

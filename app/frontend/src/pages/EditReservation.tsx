@@ -10,14 +10,14 @@ export default function EditReservation() {
   const location = useLocation()
   const [data, setData] = useState<Reservation | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const isNew = !id || id === 'new'
 
   useEffect(() => {
-    if (!id || id === 'new') {
-      // prefill service_date from query ?date=YYYY-MM-DD
+    if (isNew) {
+      // Prefill from query or use sensible defaults
       const params = new URLSearchParams(location.search)
-      const d = params.get('date')
-      if (d) setData({
-        // minimal shape to prefill form only
+      const d = params.get('date') || new Date().toISOString().slice(0,10)
+      setData({
         id: '' as any,
         client_name: '',
         pax: 2,
@@ -32,10 +32,12 @@ export default function EditReservation() {
       } as Reservation)
       return
     }
+    // Existing reservation: load then render
+    setData(null)
     api.get(`/api/reservations/${id}`)
       .then(r=> setData(r.data))
       .catch((e:any)=> setError(e?.userMessage || e?.response?.data?.detail || e?.message || 'Erreur de chargement'))
-  }, [id, location.search])
+  }, [id, isNew, location.search])
 
   async function save(payload: any) {
     setError(null)
@@ -77,7 +79,11 @@ export default function EditReservation() {
           </>
         )}
       </div>
-      <ReservationForm initial={data || undefined} onSubmit={save} />
+      {(!isNew && !data) ? (
+        <div className="text-gray-600">Chargement…</div>
+      ) : (
+        <ReservationForm initial={data || undefined} onSubmit={save} />
+      )}
     </div>
   )
 }
