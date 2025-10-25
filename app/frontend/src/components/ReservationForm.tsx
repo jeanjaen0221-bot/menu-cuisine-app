@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
 import { Reservation, ReservationCreate, ReservationItem } from '../types'
+import { User, CalendarDays, Clock, Users, Wine, StickyNote } from 'lucide-react'
 
 const DRINKS = [
   'Sans alcool', 'Vin au verre', 'Accords mets & vins', 'Soft + Café', 'Eau + Café'
@@ -68,23 +69,23 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
     <div className="card">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="label">Nom du client</label>
+          <label className="label flex items-center gap-2"><User className="h-4 w-4"/> Nom du client</label>
           <input className="input" value={client_name} onChange={e=>setClient(e.target.value)} />
         </div>
         <div>
-          <label className="label">Date du service</label>
+          <label className="label flex items-center gap-2"><CalendarDays className="h-4 w-4"/> Date du service</label>
           <input type="date" className="input" value={service_date} onChange={e=>setDate(e.target.value)} />
         </div>
         <div>
-          <label className="label">Heure d’arrivée</label>
+          <label className="label flex items-center gap-2"><Clock className="h-4 w-4"/> Heure d’arrivée</label>
           <input type="time" className="input" value={arrival_time} onChange={e=>setTime(e.target.value)} />
         </div>
         <div>
-          <label className="label">Nombre de couverts</label>
+          <label className="label flex items-center gap-2"><Users className="h-4 w-4"/> Nombre de couverts</label>
           <input type="number" min={1} className="input" value={pax} onChange={e=>setPax(Number(e.target.value))} />
         </div>
         <div>
-          <label className="label">Formule boisson</label>
+          <label className="label flex items-center gap-2"><Wine className="h-4 w-4"/> Formule boisson</label>
           <select className="input" value={drink_formula} onChange={e=>setDrink(e.target.value)}>
             {DRINKS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
@@ -98,7 +99,7 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
           </select>
         </div>
         <div className="md:col-span-2">
-          <label className="label">Notes cuisine</label>
+          <label className="label flex items-center gap-2"><StickyNote className="h-4 w-4"/> Notes cuisine</label>
           <textarea className="input min-h-[100px]" value={notes} onChange={e=>setNotes(e.target.value)} />
         </div>
       </div>
@@ -133,6 +134,7 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
 function ItemRow({ item, onChange, open, onFocus, onClose }: { item: ReservationItem, onChange: (p: Partial<ReservationItem>)=>void, open: boolean, onFocus: ()=>void, onClose: ()=>void }) {
   const [suggest, setSuggest] = useState<{name:string,type:string}[]>([])
   const [q, setQ] = useState('')
+  const [qtyInput, setQtyInput] = useState<string>(item.quantity !== undefined ? String(item.quantity) : '')
 
   async function loadDefault() {
     const res = await api.get('/api/menu-items/search', { params: { type: item.type } })
@@ -147,6 +149,10 @@ function ItemRow({ item, onChange, open, onFocus, onClose }: { item: Reservation
     }, 200)
     return () => clearTimeout(t)
   }, [q, item.type])
+
+  useEffect(() => {
+    setQtyInput(item.quantity !== undefined ? String(item.quantity) : '')
+  }, [item.quantity])
 
   return (
     <div className="grid grid-cols-12 gap-2" onBlur={(e)=>{ if (!e.currentTarget.contains(e.relatedTarget as Node)) onClose() }}>
@@ -165,7 +171,20 @@ function ItemRow({ item, onChange, open, onFocus, onClose }: { item: Reservation
           </div>
         )}
       </div>
-      <input type="number" min={0} className="input col-span-2" value={item.quantity} onChange={e=>onChange({ quantity: parseInt(e.target.value || '0', 10) })} />
+      <input
+        type="number"
+        min={0}
+        className="input col-span-2"
+        value={qtyInput}
+        onChange={e=>{
+          const v = e.target.value
+          if (/^\d*$/.test(v)) {
+            setQtyInput(v)
+            onChange({ quantity: v === '' ? 0 : parseInt(v, 10) })
+          }
+        }}
+        onBlur={()=>{ if (qtyInput === '') setQtyInput('0') }}
+      />
     </div>
   )
 }

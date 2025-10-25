@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import { Save, RefreshCw } from 'lucide-react'
 
 export default function ZenchefSettings() {
   const [apiToken, setApiToken] = useState('')
@@ -50,7 +51,7 @@ export default function ZenchefSettings() {
           <input className="input w-full" value={restaurantId} onChange={e=>setRestaurantId(e.target.value)} />
         </div>
         <div className="flex gap-2">
-          <button className="btn" onClick={save} disabled={saving}>{saving ? 'Sauvegarde…' : 'Sauvegarder'}</button>
+          <button className="btn flex items-center gap-2" onClick={save} disabled={saving}>{saving ? <><RefreshCw className="h-4 w-4 animate-spin"/> Sauvegarde…</> : <><Save className="h-4 w-4"/> Sauvegarder</>}</button>
         </div>
       </div>
 
@@ -65,7 +66,7 @@ export default function ZenchefSettings() {
           <input type="date" className="input w-full" value={toDate} onChange={e=>setToDate(e.target.value)} />
         </div>
         <div>
-          <button className="btn w-full" onClick={syncNow} disabled={syncing || !apiToken || !restaurantId}>{syncing ? 'Synchronisation…' : 'Synchroniser'}</button>
+          <button className="btn w-full flex items-center justify-center gap-2" onClick={syncNow} disabled={syncing || !apiToken || !restaurantId}>{syncing ? <><RefreshCw className="h-4 w-4 animate-spin"/> Synchronisation…</> : <><RefreshCw className="h-4 w-4"/> Synchroniser</>}</button>
         </div>
       </div>
 

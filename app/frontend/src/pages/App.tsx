@@ -1,4 +1,5 @@
 import { Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { Home as HomeIcon, UtensilsCrossed, Settings as SettingsIcon } from 'lucide-react'
 import Home from './Home'
 import EditReservation from './EditReservation'
 import MenuPage from './MenuPage'
@@ -12,9 +13,9 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-primary cursor-pointer" onClick={() => navigate('/')}>FicheCuisineManager</h1>
           <nav className="flex gap-2">
-            <Link className="btn" to="/">Fiches</Link>
-            <Link className="btn" to="/menu">Base de plats</Link>
-            <Link className="btn" to="/settings">Paramètres</Link>
+            <Link className="btn flex items-center gap-2" to="/"><HomeIcon className="h-4 w-4"/> Fiches</Link>
+            <Link className="btn flex items-center gap-2" to="/menu"><UtensilsCrossed className="h-4 w-4"/> Base de plats</Link>
+            <Link className="btn flex items-center gap-2" to="/settings"><SettingsIcon className="h-4 w-4"/> Paramètres</Link>
           </nav>
         </div>
       </header>

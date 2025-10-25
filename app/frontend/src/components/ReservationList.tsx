@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, fileDownload } from '../lib/api'
 import { Reservation } from '../types'
+import { Plus, Printer, Pencil, Filter, Search } from 'lucide-react'
 
 export default function ReservationList() {
   const [rows, setRows] = useState<Reservation[]>([])
@@ -22,16 +23,19 @@ export default function ReservationList() {
     <div className="card">
       <div className="flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
         <div className="flex gap-2 items-center">
-          <input className="input" placeholder="Rechercher un client" value={q} onChange={e=>setQ(e.target.value)} />
+          <div className="relative">
+            <Search className="h-4 w-4 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
+            <input className="input pl-8" placeholder="Rechercher un client" value={q} onChange={e=>setQ(e.target.value)} />
+          </div>
           <input type="date" className="input" value={date} onChange={e=>setDate(e.target.value)} />
-          <button className="btn" onClick={load}>Filtrer</button>
+          <button className="btn flex items-center gap-2" onClick={load}><Filter className="h-4 w-4"/> Filtrer</button>
         </div>
         <div className="flex gap-2">
-          <Link to={date ? `/reservation/new?date=${encodeURIComponent(date)}` : "/reservation/new"} className="btn">➕ Nouvelle fiche</Link>
-          <button className="btn" onClick={() => {
+          <Link to={date ? `/reservation/new?date=${encodeURIComponent(date)}` : "/reservation/new"} className="btn flex items-center gap-2"><Plus className="h-4 w-4"/> Nouvelle fiche</Link>
+          <button className="btn flex items-center gap-2" onClick={() => {
             if (!date) { alert('Sélectionnez une date'); return }
             fileDownload(`/api/reservations/day/${date}/pdf`)
-          }}>🖨️ Export PDF du jour</button>
+          }}><Printer className="h-4 w-4"/> Export PDF du jour</button>
         </div>
       </div>
 
@@ -56,8 +60,8 @@ export default function ReservationList() {
                 <td className="p-2">{r.pax}</td>
                 <td className="p-2 capitalize">{r.status}</td>
                 <td className="p-2 flex gap-2">
-                  <Link className="btn" to={`/reservation/${r.id}`}>Modifier</Link>
-                  <button className="btn" onClick={() => fileDownload(`/api/reservations/${r.id}/pdf`)}>🖨️ PDF</button>
+                  <Link className="btn flex items-center gap-2" to={`/reservation/${r.id}`}><Pencil className="h-4 w-4"/> Modifier</Link>
+                  <button className="btn flex items-center gap-2" onClick={() => fileDownload(`/api/reservations/${r.id}/pdf`)}><Printer className="h-4 w-4"/> PDF</button>
                 </td>
               </tr>
             ))}

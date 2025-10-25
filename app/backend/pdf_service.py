@@ -41,12 +41,13 @@ def generate_reservation_pdf(reservation: Reservation, items: List[ReservationIt
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name="Section", fontSize=12, leading=14, spaceBefore=6, spaceAfter=4, textColor=colors.HexColor("#111111")))
     styles.add(ParagraphStyle(name="Meta", fontSize=10, leading=13))
+    styles.add(ParagraphStyle(name="TitleBar", parent=styles['Title'], textColor=colors.white, backColor=colors.HexColor('#111827'), leading=22, spaceAfter=6))
     story = []
 
     title = f"FICHE CUISINE – {reservation.service_date}"
-    story.append(Paragraph(title, styles['Title']))
+    story.append(Paragraph(title, styles['TitleBar']))
     story.append(Spacer(1, 6))
-    story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#e5e7eb')))
+    story.append(HRFlowable(width='100%', thickness=2, color=colors.HexColor('#60a5fa')))
     story.append(Spacer(1, 10))
 
     meta_data = [
@@ -67,7 +68,8 @@ def generate_reservation_pdf(reservation: Reservation, items: List[ReservationIt
 
     def section(title: str, collection: List[ReservationItem]):
         story.append(Paragraph(f"<b>{title}</b>", styles['Section']))
-        data = [[Paragraph("Qté", styles['Meta']), Paragraph("Intitulé", styles['Meta'])]]
+        # En-têtes sans le texte 'Intitulé' (retiré)
+        data = [[Paragraph("Qté", styles['Meta']), Paragraph("", styles['Meta'])]]
         if not collection:
             data.append(["-", "-"])
         else:
@@ -75,8 +77,9 @@ def generate_reservation_pdf(reservation: Reservation, items: List[ReservationIt
                 data.append([str(it.quantity), it.name])
         tbl = Table(data, colWidths=[40, None])
         tbl.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#f3f4f6')),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#111827')),
+            # Ligne d'en-tête colorée
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#111827')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
             ('GRID', (0,0), (-1,-1), 0.25, colors.HexColor('#e5e7eb')),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (0,1), (0,-1), 'CENTER'),
@@ -84,6 +87,8 @@ def generate_reservation_pdf(reservation: Reservation, items: List[ReservationIt
             ('RIGHTPADDING', (0,0), (-1,-1), 6),
             ('TOPPADDING', (0,0), (-1,-1), 4),
             ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            # Alternance légère des lignes de données
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#f9fafb')]),
         ]))
         story.append(tbl)
         story.append(Spacer(1, 10))
@@ -95,7 +100,7 @@ def generate_reservation_pdf(reservation: Reservation, items: List[ReservationIt
     story.append(Paragraph("<b>Formule boissons :</b>", styles['Section']))
     fb_tbl = Table([[reservation.drink_formula or "-"]], colWidths=[None])
     fb_tbl.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#60a5fa')),
         ('LEFTPADDING', (0,0), (-1,-1), 6),
         ('RIGHTPADDING', (0,0), (-1,-1), 6),
         ('TOPPADDING', (0,0), (-1,-1), 4),
@@ -109,8 +114,8 @@ def generate_reservation_pdf(reservation: Reservation, items: List[ReservationIt
     note_lines = [line for line in notes.splitlines() if line.strip()] or ["-"]
     note_tbl = Table([[Paragraph(l, styles['Normal'])] for l in note_lines], colWidths=[None])
     note_tbl.setStyle(TableStyle([
-        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#e5e7eb')),
-        ('INNERGRID', (0,0), (-1,-1), 0.25, colors.HexColor('#f3f4f6')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#60a5fa')),
+        ('INNERGRID', (0,0), (-1,-1), 0.25, colors.HexColor('#bfdbfe')),
         ('LEFTPADDING', (0,0), (-1,-1), 6),
         ('RIGHTPADDING', (0,0), (-1,-1), 6),
         ('TOPPADDING', (0,0), (-1,-1), 4),
