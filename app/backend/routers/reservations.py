@@ -13,6 +13,7 @@ from ..database import get_session
 from ..models import (
     Reservation,
     ReservationCreate,
+    ReservationCreateIn,
     ReservationItem,
     ReservationRead,
     ReservationUpdate,
@@ -46,7 +47,7 @@ def list_reservations(
 
 
 @router.post("", response_model=ReservationRead)
-def create_reservation(payload: ReservationCreate, session: Session = Depends(get_session)):
+def create_reservation(payload: ReservationCreateIn, session: Session = Depends(get_session)):
     # Accept strings for date/time and normalize for safety
     data = payload.model_dump(exclude={"items"})
     if isinstance(data.get("service_date"), str):

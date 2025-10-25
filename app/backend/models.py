@@ -81,6 +81,18 @@ class ReservationCreate(ReservationBase):
     items: List[ReservationItemCreate] = Field(default_factory=list)
 
 
+# Input model variant that accepts strings for date/time (used by create endpoint)
+class ReservationCreateIn(SQLModel):
+    client_name: str
+    pax: int
+    service_date: str
+    arrival_time: str
+    drink_formula: str
+    notes: Optional[str] = None
+    status: ReservationStatus = ReservationStatus.draft
+    items: List[ReservationItemCreate] = Field(default_factory=list)
+
+
 class ReservationUpdate(SQLModel):
     client_name: Optional[str] = None
     pax: Optional[int] = None
