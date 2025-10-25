@@ -1,10 +1,12 @@
 import os
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
 from .database import init_db
 from .routers import reservations, menu_items, zenchef
@@ -35,3 +37,32 @@ backend_dir = Path(__file__).parent
 frontend_dist = (backend_dir / "../frontend/dist").resolve()
 if frontend_dist.exists():
     app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="static")
+
+
+# --- Request logging middleware ---
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.time()
+    try:
+        response = await call_next(request)
+        duration_ms = int((time.time() - start) * 1000)
+        # Basic structured log
+        print(f"REQ {request.method} {request.url.path} -> {response.status_code} ({duration_ms}ms)")
+        return response
+    except Exception as e:
+        duration_ms = int((time.time() - start) * 1000)
+        print(f"REQ {request.method} {request.url.path} -> 500 ({duration_ms}ms) EXC: {e}")
+        raise
+
+
+# --- Exception handlers ---
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    print(f"HTTPException {exc.status_code} at {request.url.path}: {exc.detail}")
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    print(f"Unhandled exception at {request.url.path}: {exc}")
+    return JSONResponse(status_code=500, content={"detail": "Une erreur inattendue est survenue. Veuillez réessayer."})

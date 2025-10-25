@@ -22,6 +22,19 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
   const [items, setItems] = useState<ReservationItem[]>(initial?.items || [])
   const [openRow, setOpenRow] = useState<number | null>(null)
 
+  // Sync when initial changes (e.g., when loading an existing reservation)
+  useEffect(() => {
+    if (!initial) return
+    setClient(initial.client_name || '')
+    setDate((initial as any).service_date || '')
+    setTime((initial as any).arrival_time || '')
+    setPax((initial as any).pax ?? 2)
+    setDrink(initial.drink_formula || DRINKS[0])
+    setNotes(initial.notes || '')
+    setStatus((initial.status as Reservation['status']) || 'draft')
+    setItems(initial.items || [])
+  }, [initial])
+
   useEffect(() => {
     if (!items.length) {
       setItems([
