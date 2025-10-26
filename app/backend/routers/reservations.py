@@ -46,6 +46,32 @@ def list_reservations(
     return out
 
 
+@router.get("/past", response_model=List[ReservationRead])
+def list_past_reservations(
+    q: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    today = date.today()
+    now_time = datetime.utcnow().time()
+    # Start from all ordered, then filter past in Python for simplicity
+    stmt = select(Reservation).order_by(Reservation.service_date.desc(), Reservation.arrival_time.desc())
+    results = session.exec(stmt).all()
+    past: List[Reservation] = []
+    for r in results:
+        if r.service_date < today:
+            past.append(r)
+        elif r.service_date == today and r.arrival_time < now_time:
+            past.append(r)
+    if q:
+        past = [r for r in past if q.lower() in r.client_name.lower()]
+
+    out: List[ReservationRead] = []
+    for r in past:
+        items = session.exec(select(ReservationItem).where(ReservationItem.reservation_id == r.id)).all()
+        out.append(ReservationRead(**r.model_dump(), items=items))
+    return out
+
+
 @router.post("", response_model=ReservationRead)
 def create_reservation(payload: ReservationCreateIn, session: Session = Depends(get_session)):
     # Accept strings for date/time and normalize for safety
