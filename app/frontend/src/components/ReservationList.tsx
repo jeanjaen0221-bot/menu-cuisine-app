@@ -12,9 +12,11 @@ export default function ReservationList() {
   async function load() {
     const params: any = {}
     if (q) params.q = q
-    if (date) params.service_date = date
-    const res = await api.get('/api/reservations', { params })
-    setRows(res.data)
+    // Fetch only upcoming on server; apply date filter client-side
+    const res = await api.get('/api/reservations/upcoming', { params })
+    const all: Reservation[] = res.data
+    const filtered = date ? all.filter(r => String(r.service_date).slice(0,10) === date) : all
+    setRows(filtered)
   }
 
   useEffect(() => { load() }, [])
