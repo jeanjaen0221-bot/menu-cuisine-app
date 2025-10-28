@@ -230,18 +230,17 @@ def update_reservation(reservation_id: uuid.UUID, payload: ReservationUpdate, se
         setattr(res, 'updated_at', datetime.utcnow())
     except Exception:
         pass
-    # Atomic update with items replacement
-    with session as s:
-        s.add(res)
-        if payload.items is not None:
-            s.exec(delete(ReservationItem).where(ReservationItem.reservation_id == res.id))
-            for it in payload.items:
-                nm = (it.name or "").strip()
-                qty = int(it.quantity or 0)
-                if not nm or qty <= 0:
-                    continue
-                s.add(ReservationItem(type=it.type, name=nm, quantity=qty, reservation_id=res.id))
-        s.commit()
+    # Atomic update with items replacement (stay on the same session)
+    session.add(res)
+    if payload.items is not None:
+        session.exec(delete(ReservationItem).where(ReservationItem.reservation_id == res.id))
+        for it in payload.items:
+            nm = (it.name or "").strip()
+            qty = int(it.quantity or 0)
+            if not nm or qty <= 0:
+                continue
+            session.add(ReservationItem(type=it.type, name=nm, quantity=qty, reservation_id=res.id))
+    session.commit()
 
     session.refresh(res)
     items = session.exec(select(ReservationItem).where(ReservationItem.reservation_id == res.id)).all()

@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from .database import init_db
 from .routers import reservations, menu_items, zenchef
@@ -74,3 +74,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 async def unhandled_exception_handler(request: Request, exc: Exception):
     print(f"Unhandled exception at {request.url.path}: {exc}")
     return JSONResponse(status_code=500, content={"detail": "Une erreur inattendue est survenue. Veuillez réessayer."})
+
+
+# --- Favicon (avoid 404 noise) ---
+@app.get("/favicon.ico")
+async def favicon():
+    # If frontend build has a favicon, StaticFiles will serve it; otherwise return 204
+    return Response(status_code=204)

@@ -11,11 +11,10 @@ export default function EditReservation() {
   const [data, setData] = useState<Reservation | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const isNew = id === 'new'
+  const isNew = !id || id === 'new'
 
   useEffect(() => {
-    // wait until router provides an id
-    if (!id) return
+    // If creating a new reservation, prefill immediately (even when no :id param)
     if (isNew) {
       const params = new URLSearchParams(location.search)
       const d = params.get('date') || new Date().toISOString().slice(0,10)
@@ -34,6 +33,8 @@ export default function EditReservation() {
       } as Reservation)
       return
     }
+    // For existing reservation ensure we have an id
+    if (!id) return
     setLoading(true)
     setData(null)
     setError(null)
