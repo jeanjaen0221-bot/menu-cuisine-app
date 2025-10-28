@@ -11,11 +11,12 @@ export default function EditReservation() {
   const [data, setData] = useState<Reservation | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const isNew = !id || id === 'new'
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  const isExisting = !!id && id !== 'new' && uuidRegex.test(id)
 
   useEffect(() => {
-    // If creating a new reservation, prefill immediately (even when no :id param)
-    if (isNew) {
+    // If not a valid UUID (including 'new' or missing/garbled like 'nov'), treat as new and prefill immediately
+    if (!isExisting) {
       const params = new URLSearchParams(location.search)
       const d = params.get('date') || new Date().toISOString().slice(0,10)
       setData({
@@ -33,8 +34,7 @@ export default function EditReservation() {
       } as Reservation)
       return
     }
-    // For existing reservation ensure we have an id
-    if (!id) return
+    // Existing reservation: we have a valid UUID id
     setLoading(true)
     setData(null)
     setError(null)
@@ -42,7 +42,7 @@ export default function EditReservation() {
       .then(r=> setData(r.data))
       .catch((e:any)=> setError(e?.userMessage || e?.response?.data?.detail || e?.message || 'Erreur de chargement'))
       .finally(()=> setLoading(false))
-  }, [id, isNew, location.search])
+  }, [id, isExisting, location.search])
 
   async function save(payload: any) {
     setError(null)
@@ -84,10 +84,10 @@ export default function EditReservation() {
           </>
         )}
       </div>
-      {(!isNew && (loading || !data)) ? (
+      {(isExisting && (loading || !data)) ? (
         <div className="text-gray-600">Chargement…</div>
       ) : (
-        <div key={(data && (data as any).id) || (isNew ? 'new' : id)}>
+        <div key={(data && (data as any).id) || (!isExisting ? 'new' : id)}>
           <ReservationForm initial={data || undefined} onSubmit={save} />
         </div>
       )}
