@@ -11,6 +11,8 @@ export default function MenuList() {
   const [q, setQ] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | 'entrée' | 'plat' | 'dessert'>('all')
   const [activeFilter, setActiveFilter] = useState<'all' | 'true' | 'false'>('all')
+  const [sortKey, setSortKey] = useState<'type' | 'active' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   async function load() {
     const res = await api.get('/api/menu-items')
@@ -40,6 +42,38 @@ export default function MenuList() {
       return true
     })
   }, [items, q, typeFilter, activeFilter])
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered]
+    if (!sortKey) return arr
+    const typeOrder: Record<string, number> = { 'entrée': 0, 'plat': 1, 'dessert': 2 }
+    arr.sort((a, b) => {
+      let va: number | boolean | string
+      let vb: number | boolean | string
+      if (sortKey === 'type') {
+        va = typeOrder[a.type] ?? 99
+        vb = typeOrder[b.type] ?? 99
+      } else {
+        va = a.active
+        vb = b.active
+      }
+      let cmp = 0
+      if (typeof va === 'number' && typeof vb === 'number') cmp = va - vb
+      else if (typeof va === 'boolean' && typeof vb === 'boolean') cmp = (va === vb ? 0 : va ? 1 : -1)
+      else cmp = String(va).localeCompare(String(vb))
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return arr
+  }, [filtered, sortKey, sortDir])
+
+  function toggleSort(key: 'type' | 'active') {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
 
   async function add() {
     if (!name) return
@@ -113,13 +147,17 @@ export default function MenuList() {
           <thead className="sticky top-0 bg-white">
             <tr className="text-left text-gray-600">
               <th className="p-2">Nom</th>
-              <th className="p-2">Type</th>
-              <th className="p-2">Statut</th>
+              <th className="p-2 cursor-pointer select-none" onClick={()=>toggleSort('type')}>
+                Type {sortKey==='type' ? (sortDir==='asc' ? '▲' : '▼') : ''}
+              </th>
+              <th className="p-2 cursor-pointer select-none" onClick={()=>toggleSort('active')}>
+                Statut {sortKey==='active' ? (sortDir==='asc' ? '▲' : '▼') : ''}
+              </th>
               <th className="p-2">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map(it => (
+            {sorted.map(it => (
               <tr key={it.id} className="border-t hover:bg-gray-50">
                 <td className="p-2 font-medium text-gray-900">{it.name}</td>
                 <td className="p-2">
@@ -134,7 +172,7 @@ export default function MenuList() {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <tr>
                 <td className="p-4 text-gray-500" colSpan={4}>Aucun élément ne correspond aux filtres.</td>
               </tr>
