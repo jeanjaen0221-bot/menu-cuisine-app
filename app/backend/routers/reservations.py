@@ -181,6 +181,20 @@ def create_reservation(payload: ReservationCreateIn, session: Session = Depends(
         "pax": pax,
     })
 
+    # Server-side guard: per-type totals must not exceed pax
+    try:
+        totals = { 'entrée': 0, 'plat': 0, 'dessert': 0 }
+        for it in payload.items:
+            if it.type in totals:
+                totals[it.type] += int(it.quantity or 0)
+        offenders = [
+            f"{k}={v}" for k, v in totals.items() if v > pax
+        ]
+        if offenders:
+            raise HTTPException(422, f"Le total par type dépasse le nombre de couverts ({pax}): " + ", ".join(offenders))
+    except AttributeError:
+        pass
+
     res = Reservation(**data)
     session.add(res)
     session.commit()
@@ -258,6 +272,28 @@ def update_reservation(reservation_id: uuid.UUID, payload: ReservationUpdate, se
         setattr(res, 'updated_at', datetime.utcnow())
     except Exception:
         pass
+    # Server-side guard: per-type totals must not exceed pax (using incoming items or existing ones)
+    try:
+        check_pax = update_data.get('pax', res.pax)
+        totals = { 'entrée': 0, 'plat': 0, 'dessert': 0 }
+        if payload.items is not None:
+            for it in payload.items:
+                if it.type in totals:
+                    totals[it.type] += int(it.quantity or 0)
+        else:
+            existing_items = session.exec(select(ReservationItem).where(ReservationItem.reservation_id == res.id)).all()
+            for it in existing_items:
+                if it.type in totals:
+                    totals[it.type] += int(it.quantity or 0)
+        offenders = [
+            f"{k}={v}" for k, v in totals.items() if v > (check_pax or 0)
+        ]
+        if offenders:
+            raise HTTPException(422, f"Le total par type dépasse le nombre de couverts ({check_pax}): " + ", ".join(offenders))
+    except Exception:
+        # if any unexpected error during guard, fail safe to proceed
+        pass
+
     # Atomic update with items replacement (stay on the same session)
     session.add(res)
     if payload.items is not None:

@@ -24,6 +24,7 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
   const [openRow, setOpenRow] = useState<number | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [errs, setErrs] = useState<{client?:string,date?:string,pax?:string,time?:string}>({})
+  const [itemsError, setItemsError] = useState<string | null>(null)
 
   // Sync when initial changes (e.g., when loading an existing reservation)
   useEffect(() => {
@@ -62,8 +63,22 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
     if (!service_date) e.date = 'Date requise'
     if (!pax || pax < 1) e.pax = 'Min 1'
     if (arrival_time && !/^\d{2}:\d{2}(:\d{2})?$/.test(arrival_time)) e.time = 'Format HH:MM'
+    // Guard: per-type totals must not exceed pax
+    const totals: Record<string, number> = { 'entrée': 0, 'plat': 0, 'dessert': 0 }
+    for (const it of items || []) {
+      if (it && it.type in totals) totals[it.type] += (Number(it.quantity) || 0)
+    }
+    let ok = Object.keys(e).length === 0
+    let itemsErr: string | null = null
+    const offenders: string[] = []
+    const px = Number(pax) || 0
+    for (const k of Object.keys(totals)) {
+      if (totals[k] > px) offenders.push(`${k}=${totals[k]}`)
+    }
+    if (offenders.length > 0) { ok = false; itemsErr = `Le total par type dépasse le nombre de couverts (${pax}): ${offenders.join(', ')}` }
     setErrs(e)
-    return Object.keys(e).length === 0
+    setItemsError(itemsErr)
+    return ok
   }
 
   async function submit() {
@@ -86,6 +101,9 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
 
   return (
     <div className="card">
+      {itemsError && (
+        <div className="mb-3 p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">{itemsError}</div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="label flex items-center gap-2"><User className="h-4 w-4"/> Nom du client</label>
@@ -132,6 +150,9 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
           <h3 className="text-lg font-semibold text-primary">Plats</h3>
           <button className="btn" onClick={addItem}>+ Ajouter un plat</button>
         </div>
+        {itemsError && (
+          <div className="mt-2 text-xs text-red-600">{itemsError}</div>
+        )}
         <div className="mt-3 space-y-2">
           {items.map((it, idx) => (
             <div key={idx}>
