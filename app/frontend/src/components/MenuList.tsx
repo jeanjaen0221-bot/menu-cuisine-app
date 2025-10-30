@@ -1,18 +1,45 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
 import { MenuItem } from '../types'
+import { Search } from 'lucide-react'
 
 export default function MenuList() {
   const [items, setItems] = useState<MenuItem[]>([])
   const [name, setName] = useState('')
   const [type, setType] = useState('plat')
   const [active, setActive] = useState(true)
+  const [q, setQ] = useState('')
+  const [typeFilter, setTypeFilter] = useState<'all' | 'entrée' | 'plat' | 'dessert'>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'true' | 'false'>('all')
 
   async function load() {
     const res = await api.get('/api/menu-items')
     setItems(res.data)
   }
   useEffect(() => { load() }, [])
+
+  const counts = useMemo(() => {
+    const c = { entree: 0, plat: 0, dessert: 0, total: items.length }
+    for (const it of items) {
+      if (it.type === 'entrée') c.entree++
+      else if (it.type === 'plat') c.plat++
+      else if (it.type === 'dessert') c.dessert++
+    }
+    return c
+  }, [items])
+
+  const filtered = useMemo(() => {
+    const ql = q.trim().toLowerCase()
+    return items.filter(it => {
+      if (typeFilter !== 'all' && it.type !== typeFilter) return false
+      if (activeFilter !== 'all') {
+        const want = activeFilter === 'true'
+        if (it.active !== want) return false
+      }
+      if (ql && !it.name.toLowerCase().includes(ql)) return false
+      return true
+    })
+  }, [items, q, typeFilter, activeFilter])
 
   async function add() {
     if (!name) return
@@ -34,44 +61,84 @@ export default function MenuList() {
 
   return (
     <div className="card">
-      <h3 className="text-lg font-semibold text-primary mb-3">Base de plats</h3>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <h3 className="text-lg font-semibold text-primary">Base de plats</h3>
+        <div className="flex items-center gap-2 text-xs md:text-sm text-gray-600">
+          <span>Total: <b>{counts.total}</b></span>
+          <span>Entrées: <b>{counts.entree}</b></span>
+          <span>Plats: <b>{counts.plat}</b></span>
+          <span>Desserts: <b>{counts.dessert}</b></span>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-12 gap-2">
-        <input className="input col-span-6" placeholder="Nom du plat" value={name} onChange={e=>setName(e.target.value)} />
-        <select className="input col-span-3" value={type} onChange={e=>setType(e.target.value)}>
+      <div className="mt-3 grid grid-cols-12 gap-2">
+        <div className="col-span-12 md:col-span-5 relative">
+          <Search className="h-4 w-4 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
+          <input className="input pl-8" placeholder="Rechercher un plat" value={q} onChange={e=>setQ(e.target.value)} />
+        </div>
+        <div className="col-span-12 md:col-span-7 flex flex-wrap gap-2">
+          <div className="flex gap-2">
+            {(['all','entrée','plat','dessert'] as const).map(tf => (
+              <button key={tf} className={`btn ${typeFilter===tf ? '' : 'bg-white text-gray-700 hover:bg-gray-50'}`} onClick={()=>setTypeFilter(tf)}>
+                {tf === 'all' ? 'Tous' : tf.charAt(0).toUpperCase()+tf.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {(['all','true','false'] as const).map(af => (
+              <button key={af} className={`btn ${activeFilter===af ? '' : 'bg-white text-gray-700 hover:bg-gray-50'}`} onClick={()=>setActiveFilter(af)}>
+                {af==='all' ? 'Tous' : af==='true' ? 'Actifs' : 'Inactifs'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-12 gap-2">
+        <input className="input col-span-12 md:col-span-6" placeholder="Nom du plat (ajout rapide)" value={name} onChange={e=>setName(e.target.value)} />
+        <select className="input col-span-6 md:col-span-3" value={type} onChange={e=>setType(e.target.value)}>
           <option>entrée</option>
           <option>plat</option>
           <option>dessert</option>
         </select>
-        <select className="input col-span-2" value={String(active)} onChange={e=>setActive(e.target.value==='true')}>
+        <select className="input col-span-6 md:col-span-2" value={String(active)} onChange={e=>setActive(e.target.value==='true')}>
           <option value="true">Actif</option>
           <option value="false">Inactif</option>
         </select>
-        <button className="btn col-span-1" onClick={add}>Ajouter</button>
+        <button className="btn col-span-6 md:col-span-1" onClick={add}>Ajouter</button>
       </div>
 
       <div className="mt-4 overflow-auto">
         <table className="min-w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 bg-white">
             <tr className="text-left text-gray-600">
               <th className="p-2">Nom</th>
               <th className="p-2">Type</th>
-              <th className="p-2">Actif</th>
+              <th className="p-2">Statut</th>
               <th className="p-2">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {items.map(it => (
-              <tr key={it.id} className="border-t">
-                <td className="p-2">{it.name}</td>
-                <td className="p-2">{it.type}</td>
-                <td className="p-2">{it.active ? 'Oui' : 'Non'}</td>
+            {filtered.map(it => (
+              <tr key={it.id} className="border-t hover:bg-gray-50">
+                <td className="p-2 font-medium text-gray-900">{it.name}</td>
+                <td className="p-2">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${it.type==='entrée' ? 'bg-emerald-50 text-emerald-700' : it.type==='plat' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>{it.type}</span>
+                </td>
+                <td className="p-2">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${it.active ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>{it.active ? 'Actif' : 'Inactif'}</span>
+                </td>
                 <td className="p-2 flex gap-2">
                   <button className="btn" onClick={()=>toggleActive(it)}>{it.active ? 'Désactiver' : 'Activer'}</button>
                   <button className="btn" onClick={()=>remove(it)}>Supprimer</button>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td className="p-4 text-gray-500" colSpan={4}>Aucun élément ne correspond aux filtres.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
