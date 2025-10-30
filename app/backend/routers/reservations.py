@@ -1,13 +1,16 @@
 from __future__ import annotations
 import os
 import uuid
-from datetime import date, datetime, time as dtime
+import os
+from datetime import date, datetime, time as dtime, timedelta
+from zoneinfo import ZoneInfo
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy import delete
 from sqlmodel import Session, select
+from sqlalchemy import or_, and_
 
 from ..database import get_session
 from ..models import (
@@ -49,23 +52,36 @@ def list_reservations(
 @router.get("/upcoming", response_model=List[ReservationRead])
 def list_upcoming_reservations(
     q: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 50,
     session: Session = Depends(get_session),
 ):
-    today = date.today()
-    now_time = datetime.utcnow().time()
-    stmt = select(Reservation).order_by(Reservation.service_date.asc(), Reservation.arrival_time.asc())
-    results = session.exec(stmt).all()
-    upcoming: List[Reservation] = []
-    for r in results:
-        if r.service_date > today:
-            upcoming.append(r)
-        elif r.service_date == today and r.arrival_time >= now_time:
-            upcoming.append(r)
-    if q:
-        upcoming = [r for r in upcoming if q.lower() in r.client_name.lower()]
+    tz_name = os.getenv("TZ", "Europe/Paris")
+    now_local = datetime.now(ZoneInfo(tz_name))
+    today = now_local.date()
+    now_time = now_local.time()
 
+    condition = or_(
+        Reservation.service_date > today,
+        and_(Reservation.service_date == today, Reservation.arrival_time >= now_time),
+    )
+
+    stmt = (
+        select(Reservation)
+        .where(condition)
+        .order_by(Reservation.service_date.asc(), Reservation.arrival_time.asc())
+    )
+    if q:
+        stmt = stmt.where(Reservation.client_name.ilike(f"%{q}%"))
+    if page < 1:
+        page = 1
+    if per_page < 1:
+        per_page = 50
+    stmt = stmt.offset((page - 1) * per_page).limit(per_page)
+
+    rows = session.exec(stmt).all()
     out: List[ReservationRead] = []
-    for r in upcoming:
+    for r in rows:
         items = session.exec(select(ReservationItem).where(ReservationItem.reservation_id == r.id)).all()
         out.append(ReservationRead(**r.model_dump(), items=items))
     return out
@@ -73,24 +89,36 @@ def list_upcoming_reservations(
 @router.get("/past", response_model=List[ReservationRead])
 def list_past_reservations(
     q: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 50,
     session: Session = Depends(get_session),
 ):
-    today = date.today()
-    now_time = datetime.utcnow().time()
-    # Start from all ordered, then filter past in Python for simplicity
-    stmt = select(Reservation).order_by(Reservation.service_date.desc(), Reservation.arrival_time.desc())
-    results = session.exec(stmt).all()
-    past: List[Reservation] = []
-    for r in results:
-        if r.service_date < today:
-            past.append(r)
-        elif r.service_date == today and r.arrival_time < now_time:
-            past.append(r)
-    if q:
-        past = [r for r in past if q.lower() in r.client_name.lower()]
+    tz_name = os.getenv("TZ", "Europe/Paris")
+    now_local = datetime.now(ZoneInfo(tz_name))
+    today = now_local.date()
+    now_time = now_local.time()
 
+    condition = or_(
+        Reservation.service_date < today,
+        and_(Reservation.service_date == today, Reservation.arrival_time < now_time),
+    )
+
+    stmt = (
+        select(Reservation)
+        .where(condition)
+        .order_by(Reservation.service_date.desc(), Reservation.arrival_time.desc())
+    )
+    if q:
+        stmt = stmt.where(Reservation.client_name.ilike(f"%{q}%"))
+    if page < 1:
+        page = 1
+    if per_page < 1:
+        per_page = 50
+    stmt = stmt.offset((page - 1) * per_page).limit(per_page)
+
+    rows = session.exec(stmt).all()
     out: List[ReservationRead] = []
-    for r in past:
+    for r in rows:
         items = session.exec(select(ReservationItem).where(ReservationItem.reservation_id == r.id)).all()
         out.append(ReservationRead(**r.model_dump(), items=items))
     return out

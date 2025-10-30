@@ -5,7 +5,7 @@ from enum import Enum
 from typing import List, Optional
 
 from sqlmodel import Field, SQLModel
-from sqlalchemy import UniqueConstraint, CheckConstraint
+from sqlalchemy import UniqueConstraint, CheckConstraint, Index
 
 
 class ReservationStatus(str, Enum):
@@ -79,6 +79,7 @@ class Reservation(ReservationBase, table=True):
     __table_args__ = (
         UniqueConstraint('service_date','arrival_time','client_name','pax', name='uq_reservation_slot'),
         CheckConstraint('pax >= 1', name='ck_reservation_pax_min'),
+        Index('ix_reservation_date_time', 'service_date', 'arrival_time'),
     )
 
 

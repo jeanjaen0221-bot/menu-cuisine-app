@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, Response
 
-from .database import init_db
+from .database import init_db, run_startup_migrations, session_context
 from .routers import reservations, menu_items, zenchef
 
 load_dotenv()
@@ -32,6 +32,11 @@ app.include_router(zenchef.router)
 
 # Ensure DB
 init_db()
+# Apply idempotent startup migrations automatically on Railway (PostgreSQL)
+try:
+    run_startup_migrations()
+except Exception as e:
+    print(f"Startup migrations skipped due to error: {e}")
 
 # Static serving for built frontend if available
 backend_dir = Path(__file__).parent
@@ -81,3 +86,16 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 async def favicon():
     # If frontend build has a favicon, StaticFiles will serve it; otherwise return 204
     return Response(status_code=204)
+
+
+# --- Healthcheck ---
+@app.get("/health")
+async def health():
+    ok_db = False
+    try:
+        with session_context() as s:
+            s.exec("SELECT 1")
+            ok_db = True
+    except Exception:
+        ok_db = False
+    return {"status": "ok", "db": ok_db}
