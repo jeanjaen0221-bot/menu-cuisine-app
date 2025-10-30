@@ -147,11 +147,23 @@ export default function MenuList() {
           <thead className="sticky top-0 bg-white">
             <tr className="text-left text-gray-600">
               <th className="p-2">Nom</th>
-              <th className="p-2 cursor-pointer select-none" onClick={()=>toggleSort('type')}>
-                Type {sortKey==='type' ? (sortDir==='asc' ? '▲' : '▼') : ''}
+              <th className="p-2" aria-sort={sortKey==='type' ? (sortDir==='asc' ? 'ascending' : 'descending') : 'none'}>
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded hover:bg-gray-100 cursor-pointer select-none"
+                  onClick={()=>toggleSort('type')}
+                >
+                  Type {sortKey==='type' ? (sortDir==='asc' ? '▲' : '▼') : ''}
+                </button>
               </th>
-              <th className="p-2 cursor-pointer select-none" onClick={()=>toggleSort('active')}>
-                Statut {sortKey==='active' ? (sortDir==='asc' ? '▲' : '▼') : ''}
+              <th className="p-2" aria-sort={sortKey==='active' ? (sortDir==='asc' ? 'ascending' : 'descending') : 'none'}>
+                <button
+                  type="button"
+                  className="px-2 py-1 rounded hover:bg-gray-100 cursor-pointer select-none"
+                  onClick={()=>toggleSort('active')}
+                >
+                  Statut {sortKey==='active' ? (sortDir==='asc' ? '▲' : '▼') : ''}
+                </button>
               </th>
               <th className="p-2">Actions</th>
             </tr>
