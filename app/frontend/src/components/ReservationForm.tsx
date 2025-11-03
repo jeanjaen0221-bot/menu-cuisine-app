@@ -140,8 +140,131 @@ export default function ReservationForm({ initial, onSubmit }: Props) {
           </select>
         </div>
         <div className="md:col-span-2">
-          <label className="label flex items-center gap-2"><StickyNote className="h-4 w-4"/> Notes cuisine</label>
-          <textarea className="input min-h-[100px]" value={notes} onChange={e=>setNotes(e.target.value)} />
+          <div>
+            <label className="label flex items-center gap-2"><StickyNote className="h-4 w-4"/> Notes cuisine</label>
+            <div className="flex gap-1 mb-1 flex-wrap">
+              <button 
+                type="button" 
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-100"
+                onClick={() => {
+                  const textarea = document.querySelector('textarea[name="notes"]') as HTMLTextAreaElement;
+                  if (!textarea) return;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = notes.substring(start, end);
+                  const before = notes.substring(0, start);
+                  const after = notes.substring(end);
+                  setNotes(`${before}*${selectedText}*${after}`);
+                  // Replace the selection with the formatted text
+                  setTimeout(() => {
+                    textarea.setSelectionRange(start, end + 2);
+                    textarea.focus();
+                  }, 0);
+                }}
+                title="Gras"
+              >
+                <strong>B</strong>
+              </button>
+              <button 
+                type="button" 
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-100 italic"
+                onClick={() => {
+                  const textarea = document.querySelector('textarea[name="notes"]') as HTMLTextAreaElement;
+                  if (!textarea) return;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = notes.substring(start, end);
+                  const before = notes.substring(0, start);
+                  const after = notes.substring(end);
+                  setNotes(`${before}_${selectedText}_${after}`);
+                  // Replace the selection with the formatted text
+                  setTimeout(() => {
+                    textarea.setSelectionRange(start, end + 2);
+                    textarea.focus();
+                  }, 0);
+                }}
+                title="Italique"
+              >
+                I
+              </button>
+              <div className="relative inline-block">
+                <button 
+                  type="button" 
+                  className="px-2 py-1 text-sm border rounded hover:bg-gray-100 flex items-center gap-1"
+                  title="Couleur du texte"
+                  onClick={(e) => {
+                    const colorPicker = document.getElementById('color-picker') as HTMLInputElement;
+                    if (colorPicker) colorPicker.click();
+                  }}
+                >
+                  <span>A</span>
+                  <span className="text-xs">▼</span>
+                </button>
+                <input 
+                  type="color" 
+                  id="color-picker" 
+                  className="absolute opacity-0 w-0 h-0" 
+                  onChange={(e) => {
+                    const color = e.target.value;
+                    const textarea = document.querySelector('textarea[name="notes"]') as HTMLTextAreaElement;
+                    if (!textarea) return;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const selectedText = notes.substring(start, end);
+                    const before = notes.substring(0, start);
+                    const after = notes.substring(end);
+                    setNotes(`${before}[color=${color}]${selectedText}[/color]${after}`);
+                    // Replace the selection with the formatted text
+                    setTimeout(() => {
+                      textarea.setSelectionRange(start, end + 15 + color.length);
+                      textarea.focus();
+                    }, 0);
+                  }}
+                />
+              </div>
+              <button 
+                type="button" 
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-100"
+                onClick={() => {
+                  const textarea = document.querySelector('textarea[name="notes"]') as HTMLTextAreaElement;
+                  if (!textarea) return;
+                  const start = textarea.selectionStart;
+                  const end = textarea.selectionEnd;
+                  const selectedText = notes.substring(start, end);
+                  const before = notes.substring(0, start);
+                  const after = notes.substring(end);
+                  setNotes(`${before}- ${selectedText}\n${after}`);
+                  // Place cursor at the end of the new list item
+                  setTimeout(() => {
+                    const newPosition = start + 2 + selectedText.length;
+                    textarea.setSelectionRange(newPosition, newPosition);
+                    textarea.focus();
+                  }, 0);
+                }}
+                title="Liste à puces"
+              >
+                •
+              </button>
+            </div>
+            <textarea 
+              name="notes"
+              className="input min-h-[100px] w-full font-mono" 
+              value={notes} 
+              onChange={e => setNotes(e.target.value)} 
+              placeholder="Entrez vos notes ici..."
+            />
+            <style dangerouslySetInnerHTML={{
+              __html: `
+                textarea[name="notes"] {
+                  white-space: pre-wrap;
+                }
+                textarea[name="notes"]::placeholder {
+                  color: #9CA3AF;
+                  opacity: 1;
+                }
+              `
+            }} />
+          </div>
         </div>
       </div>
 

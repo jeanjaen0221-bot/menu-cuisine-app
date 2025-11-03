@@ -111,15 +111,44 @@ def generate_reservation_pdf(reservation: Reservation, items: List[ReservationIt
 
     notes = reservation.notes or ""
     story.append(Paragraph("<b>Notes :</b>", styles['Section']))
-    note_lines = [line for line in notes.splitlines() if line.strip()] or ["-"]
-    note_tbl = Table([[Paragraph(l, styles['Normal'])] for l in note_lines], colWidths=[None])
+    
+    # Convertir les marqueurs de formatage personnalisés en balises HTML
+    def format_text(text):
+        if not text:
+            return "-"
+        # Remplacer les marqueurs de formatage
+        text = text.replace('*', '<b>', 1).replace('*', '</b>', 1)  # Gras
+        text = text.replace('_', '<i>', 1).replace('_', '</i>', 1)  # Italique
+        # Gérer les couleurs [color=#RRGGBB]texte[/color]
+        import re
+        text = re.sub(r'\[color=([^\]]+)\](.*?)\[/color\]', r'<font color="\1">\2</font>', text)
+        # Gérer les listes à puces
+        text = text.replace('\n- ', '<br/>• ')
+        return text
+    
+    # Créer un style pour les notes avec support du HTML
+    note_style = ParagraphStyle(
+        'NoteStyle',
+        parent=styles['Normal'],
+        leading=14,
+        spaceBefore=4,
+        spaceAfter=4
+    )
+    
+    # Créer un paragraphe avec formatage HTML
+    formatted_notes = format_text(notes)
+    note_para = Paragraph(formatted_notes, note_style)
+    
+    # Créer un tableau avec une seule cellule pour le paragraphe formaté
+    note_tbl = Table([[note_para]], colWidths=[doc.width])
     note_tbl.setStyle(TableStyle([
         ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#60a5fa')),
         ('INNERGRID', (0,0), (-1,-1), 0.25, colors.HexColor('#bfdbfe')),
-        ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('LEFTPADDING', (0,0), (-1,-1), 10),
+        ('RIGHTPADDING', (0,0), (-1,-1), 10),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
     ]))
     story.append(note_tbl)
 
@@ -181,13 +210,48 @@ def generate_day_pdf(d: date, reservations: List[Reservation], items_by_res: dic
         c.drawString(40, y, "Notes :")
         y -= 14
         c.setFont("Helvetica", 11)
-        if res.notes:
-            for line in res.notes.splitlines():
-                c.drawString(50, y, f"- {line}")
+        
+        def draw_formatted_text(text, x, y, max_width):
+            if not text:
+                c.drawString(x, y, "-")
+                return y - 14
+                
+            # Découper le texte en lignes tout en préservant le formatage
+            import re
+            from reportlab.pdfbase import pdfmetrics
+            from reportlab.pdfbase.ttfonts import TTFont
+            
+            # Essayer de charger une police à largeur fixe
+            try:
+                pdfmetrics.registerFont(TTFont('Courier', 'Courier'))
+                c.setFont("Courier", 10)
+            except:
+                c.setFont("Helvetica", 10)
+            
+            # Simplifier le formatage pour la version PDF simple
+            lines = []
+            for line in text.split('\n'):
+                # Supprimer les marqueurs de formatage pour la version simple
+                clean_line = re.sub(r'\[color=[^\]]+\]|\[/color\]|\*|_', '', line)
+                if clean_line.startswith('- '):
+                    clean_line = '• ' + clean_line[2:]
+                lines.append(clean_line)
+            
+            # Dessiner chaque ligne
+            for line in lines or ["-"]:
+                c.drawString(x, y, line)
                 y -= 14
-        else:
-            c.drawString(50, y, "-")
-            y -= 14
+                if y < 40:  # Nouvelle page si on arrive en bas
+                    c.showPage()
+                    y = height - 40
+                    c.setFont("Helvetica-Bold", 12)
+                    c.drawString(40, y, "Notes (suite) :")
+                    y -= 20
+                    c.setFont("Courier" if 'Courier' in c.getAvailableFonts() else "Helvetica", 10)
+            
+            return y
+        
+        y = draw_formatted_text(res.notes, 50, y, width - 90)
 
     c.save()
     return filename
